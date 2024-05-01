@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GDP Bar Chart</title>
+<style>
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    #chart {
+      width: 100%;
+      height: 400px;
+      border: 1px solid #ccc;
+    }
+    
+    .bar {
+      fill: steelblue;
+    }
+    
+    #tooltip {
+      position: absolute;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="title">United States GDP</h1>
+    <svg id="chart"></svg>
+    <div id="tooltip"></div>
+  </div>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script>
+    // Fetch data
+ fetch('https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json')
+      .then(response => response.json())
+      .then(data => {
+        // Process data
+        const gdpData = data.data;
+
+        // Set up dimensions
+        const margin = { top: 20, right: 20, bottom: 50, left: 50 };
+        const width = 800 - margin.left - margin.right;
+        const height = 400 - margin.top - margin.bottom;
+
+        // Parse date
+        const parseDate = d3.timeParse('%Y-%m-%d');
+        gdpData.forEach(d => d[0] = parseDate(d[0]));
+
+        // Define scales
+        const xScale = d3.scaleTime()
+          .domain(d3.extent(gdpData, d => d[0]))
+          .range([0, width]);
+        
+        const yScale = d3.scaleLinear()
+          .domain([0, d3.max(gdpData, d => d[1])])
+          .range([height, 0]);
+
+        // Create SVG
+        const svg = d3.select('#chart')
+          .attr('width', width + margin.left + margin.right)
+          .attr('height', height + margin.top + margin.bottom)
+          .append('g')
+          .attr('transform', `translate(${margin.left}, ${margin.top})`);
+
+        // Create axes
+        const xAxis = d3.axisBottom(xScale);
+        const yAxis = d3.axisLeft(yScale);
+        
+        svg.append('g')
+          .attr('id', 'x-axis')
+          .attr('transform', `translate(0, ${height})`)
+          .call(xAxis);
+
+        svg.append('g')
+          .attr('id', 'y-axis')
+          .call(yAxis);
+
+        // Create bars
+        svg.selectAll('.bar')
+          .data(gdpData)
+          .enter().append('rect')
+          .attr('class', 'bar')
+          .attr('x', d => xScale(d[0]))
+          .attr('y', d => yScale(d[1]))
+          .attr('width', width / gdpData.length)
+          .attr('height', d => height - yScale(d[1]))
+          .attr('data-date', d => d[0])
+          .attr('data-gdp', d => d[1])
+          .on('mouseover', function(event, d) {
+            const tooltip = d3.select('#tooltip');
+            tooltip.html(`${d3.timeFormat('%B %Y')(d[0])} <br> $${d[1]} Billion`)
+              .attr('data-date', d[0])
+              .style('left', event.pageX + 'px')
+              .style('top', event.pageY - 30 + 'px')
+              .style('display', 'block');
+          })
+          .on('mouseout', function() {
+            d3.select('#tooltip').style('display', 'none');
+          });
+      })
+      .catch(error => console.error('Error fetching data:', error));
+  </script>
+</body>
+</html>
